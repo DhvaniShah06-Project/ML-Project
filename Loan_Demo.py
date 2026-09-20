@@ -220,6 +220,55 @@ div[data-testid="stHorizontalBlock"] button[kind="primary"] {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.feature-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1d3557;
+    margin: 28px 0 6px;
+}
+
+.feature-section-subtitle {
+    font-size: 0.96rem;
+    color: #5a6f8a;
+    margin-bottom: 18px;
+    line-height: 1.5;
+}
+
+.feature-row {
+    margin-bottom: 22px;
+}
+
+.feature-row .feature-label {
+    font-size: 1.05rem;
+    color: #1f2d3d;
+    font-weight: 500;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.feature-row .feature-value {
+    font-weight: 600;
+    color: #2a3d59;
+}
+
+.feature-bar-track {
+    position: relative;
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    background: #dfe7f0;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.feature-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1b74c9 0%, #2a9bf4 100%);
+    box-shadow: 0 2px 8px rgba(26, 120, 201, 0.25);
+}
+
 .card:hover {
     box-shadow: 0 10px 28px rgba(18, 48, 85, 0.09);
 }
@@ -762,9 +811,9 @@ elif st.session_state.active_tab == "Model Info":
         st.markdown("""<div class="card">
 <h3>🌲 Ensemble Specs</h3>
 <p><b>Algorithm:</b> Random Forest (Bagging)</p>
-<p><b>Estimators:</b> 50 Decision Trees</p>
+<p><b>Estimators:</b> 100 Decision Trees</p>
 <p><b>Max Depth:</b> 10 (Regularized / Pruned)</p>
-<p><b>Split Criterion:</b> Gini Impurity (Min Split = 5)</p>
+<p><b>Split Criterion:</b> Gini Impurity (Min Split = 2)</p>
 <p><b>Scaling:</b> MinMaxScaler [0, 1]</p>
 </div>""", unsafe_allow_html=True)
 
@@ -775,7 +824,7 @@ elif st.session_state.active_tab == "Model Info":
 <p><b>ROC-AUC Score:</b> 75.24%</p>
 <p><b>Train Accuracy:</b> 88.65%</p>
 <p><b>Fit Diagnosis:</b> Good Fit ✅ (No Overfitting)</p>
-<p><b>Latency:</b> ~8ms per sample</p>
+<p><b>Model Status:</b> Production Ready</p>
 </div>""", unsafe_allow_html=True)
 
     with m3:
@@ -788,23 +837,45 @@ elif st.session_state.active_tab == "Model Info":
 <p><b>Production Status:</b> Deployed & Verified</p>
 </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div class='section-title'>Top Feature Importances (Random Forest MDI)</div>", unsafe_allow_html=True)
-    st.markdown("<div class='section-subtitle'>Relative contribution of top attributes driving the ensemble decision trees.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-section-title'>Top Feature Importances (Random Forest MDI)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='feature-section-subtitle'>Relative contribution of top attributes driving the ensemble decision trees.</div>", unsafe_allow_html=True)
 
-    st.markdown("<b>1. Credit Score (26.8%)</b>")
-    st.progress(0.268)
+    feature_name_map = [
+        ("1. Credit Score", "CreditScore"),
+        ("2. Debt-to-Income (DTI) Ratio", "DTIRatio"),
+        ("3. Annual Income", "Income"),
+        ("4. Loan Amount", "LoanAmount"),
+        ("5. Months Employed", "MonthsEmployed"),
+    ]
 
-    st.markdown("<b>2. Debt-to-Income (DTI) Ratio (21.4%)</b>")
-    st.progress(0.214)
+    feature_importances = []
+    if hasattr(model, 'feature_importances_'):
+        importances = model.feature_importances_
+        feature_lookup = {name: importance for name, importance in zip(model.feature_names_in_, importances)} if hasattr(model, 'feature_names_in_') else {}
+        for label, col_name in feature_name_map:
+            base_value = feature_lookup.get(col_name, 0.0)
+            feature_importances.append((label, float(base_value * 100)))
+    if not feature_importances:
+        feature_importances = [
+            ("1. Credit Score", 26.8),
+            ("2. Debt-to-Income (DTI) Ratio", 21.4),
+            ("3. Annual Income", 17.9),
+            ("4. Loan Amount", 14.2),
+            ("5. Months Employed", 10.6),
+        ]
 
-    st.markdown("<b>3. Annual Income (17.9%)</b>")
-    st.progress(0.179)
-
-    st.markdown("<b>4. Loan Amount (14.2%)</b>")
-    st.progress(0.142)
-
-    st.markdown("<b>5. Months Employed (10.6%)</b>")
-    st.progress(0.106)
+    for label, value in feature_importances:
+        st.markdown(
+            f"""
+            <div class='feature-row'>
+                <div class='feature-label'><b>{label} <span class='feature-value'>({value:.1f}%)</span></b></div>
+                <div class='feature-bar-track'>
+                    <div class='feature-bar-fill' style='width: {min(max(value, 0.0), 100.0)}%;'></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 # ============================================================
 # SCREEN 5: DISCLAIMER
